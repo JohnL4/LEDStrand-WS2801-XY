@@ -13,6 +13,11 @@ struct point
    int x,y;
 };
 
+struct rgbStruct
+{
+   int r,g,b;
+};
+
 // ---------------------------------------------------------------------------------------------------------------------
 //  globals
 // ---------------------------------------------------------------------------------------------------------------------
@@ -99,8 +104,7 @@ void cartesianTest()
    struct point pt;
    uint32_t c;
 
-   float rf, gf, bf;
-   int ri, gi, bi;
+   struct rgbStruct rgb;
    
    // bottom left to top right
    for (i = 0; i < 5; i++)
@@ -113,11 +117,8 @@ void cartesianTest()
       // lightness *= lightness;
       if (lightness < MIN_LIGHTNESS)
          lightness = MIN_LIGHTNESS;
-      hsl2rgb( 0.666667, 1.0, lightness, &rf, &gf, &bf);
-      ri = constrain( 256 * rf, 0, 255);
-      gi = constrain( 256 * gf, 0, 255);
-      bi = constrain( 256 * bf, 0, 255);
-      c = Color( ri, gi, bi);
+      rgb = hsl2rgb( 240, 1.0, lightness);
+      c = Color( rgb.r, rgb.g, rgb.b);
       
       strip.setPixelColor( point2seq( pt, org, gridSize), c);
       strip.show();
@@ -137,11 +138,8 @@ void cartesianTest()
       // lightness *= lightness;
       if (lightness < MIN_LIGHTNESS)
          lightness = MIN_LIGHTNESS;
-      hsl2rgb( 10.0/360.0, 1.0, lightness, &rf, &gf, &bf);
-      ri = constrain( 256 * rf, 0, 255);
-      gi = constrain( 256 * gf, 0, 255);
-      bi = constrain( 256 * bf, 0, 255);
-      c = Color( ri, gi, bi);
+      rgb = hsl2rgb( 10, 1.0, lightness);
+      c = Color( rgb.r, rgb.g, rgb.b);
       strip.setPixelColor( point2seq( pt, org, gridSize), c);
       strip.show();
       prevPt = pt;
@@ -149,29 +147,26 @@ void cartesianTest()
       delay( 100);
    }
 
-   // delay( 1000);
+   delay( 2000);
 
-   // // up the middle
-   // for (i = 0; i < 5; i++)
-   // {
-   //    pt = {2,i };
-   //    saturation = i * dSaturation;
-   //    // lightness *= lightness;
-   //    hsl2rgb( 120.0/360.0, saturation, 0.5, &rf, &gf, &bf);
-   //    ri = constrain( 256 * rf, 0, 255);
-   //    gi = constrain( 256 * gf, 0, 255);
-   //    bi = constrain( 256 * bf, 0, 255);
-   //    c = Color( ri, gi, bi);
-   //    strip.setPixelColor( point2seq( pt, org, gridSize), c);
-   //    strip.show();
-   //    prevPt = pt;
-   //    prevPtSet = true;
-   //    delay( 100);
-   // }
-   // pt = {3,4 };
-   // c = Color( 0, 255, 0);
-   // strip.setPixelColor( point2seq( pt, org, gridSize), c);
-   // strip.show();
+   // up the middle
+   for (i = 0; i < 5; i++)
+   {
+      pt = {2,i };
+      saturation = i * dSaturation;
+      // lightness *= lightness;
+      rgb = hsl2rgb( 120, saturation, 0.5);
+      c = Color( rgb.r, rgb.g, rgb.b);
+      strip.setPixelColor( point2seq( pt, org, gridSize), c);
+      strip.show();
+      prevPt = pt;
+      prevPtSet = true;
+      delay( 100);
+   }
+   pt = {3,4 };
+   c = Color( 0, 255, 0);
+   strip.setPixelColor( point2seq( pt, org, gridSize), c);
+   strip.show();
    
    delay( 1500);
    clearStrip();
@@ -223,27 +218,6 @@ int point2seq( struct point aPt, struct point anOrigin, struct point aGridSize)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-//  hsl2rgb
-// ---------------------------------------------------------------------------------------------------------------------
-
-// CSS3 spec algorithm: http://www.w3.org/TR/2011/REC-css3-color-20110607/#hsl-color
-// All params in range [0.0..1.0]
-
-void hsl2rgb( float hue, float sat, float light, float *r, float *g, float *b)
-{
-   float m1, m2;
-   
-   if (light < 0.5)
-      m2 = light * (sat + 1.0);
-   else
-      m2 = light + sat - light * sat;
-   m1 = light * 2.0 - m2;
-   *r = hue2rgb( m1, m2, hue + 1.0/3.0);
-   *g = hue2rgb( m1, m2, hue);
-   *b = hue2rgb( m1, m2, hue - 1.0/3.0);
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
 //  hue2rgb (internal helper function)
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -252,7 +226,7 @@ void hsl2rgb( float hue, float sat, float light, float *r, float *g, float *b)
 float hue2rgb( float m1, float m2, float hue )
 {
    float retval;
-   float h = hue;
+   float h;
    
    if (hue < 0.0)
       h = hue + 1.0;
@@ -272,6 +246,96 @@ float hue2rgb( float m1, float m2, float hue )
 
    return retval;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+//  hsl2rgb
+// ---------------------------------------------------------------------------------------------------------------------
+
+// CSS3 spec algorithm: http://www.w3.org/TR/2011/REC-css3-color-20110607/#hsl-color
+// hue in degrees
+// sat, light in range [0..1]
+
+struct rgbStruct hsl2rgb( int aHue, float aSat, float aLight)
+{
+   rgbStruct retval;
+   
+   float m1, m2, r, g, b;
+   
+   int hue = aHue;
+   while (hue < 0)
+      hue += 360;
+   while (hue > 360)
+      hue -= 360;
+
+   float h = (float) hue / 360.0;
+   
+   if (aLight < 0.5)
+      m2 = aLight * (aSat + 1.0);
+   else
+      m2 = aLight + aSat - aLight * aSat;
+   m1 = aLight * 2.0 - m2;
+   r = hue2rgb( m1, m2, h + 1.0/3.0);
+   g = hue2rgb( m1, m2, h);
+   b = hue2rgb( m1, m2, h - 1.0/3.0);
+   retval.r = constrain( (int) (r * 256), 0, 255);
+   retval.g = constrain( (int) (g * 256), 0, 255);
+   retval.b = constrain( (int) (b * 256), 0, 255);
+
+   return retval;
+}
+
+// hsl2rgb, hue2rgb commented out in favor of new versions
+
+// // ---------------------------------------------------------------------------------------------------------------------
+// //  hsl2rgb
+// // ---------------------------------------------------------------------------------------------------------------------
+
+// // CSS3 spec algorithm: http://www.w3.org/TR/2011/REC-css3-color-20110607/#hsl-color
+// // All params in range [0.0..1.0]
+
+// void hsl2rgb( float hue, float sat, float light, float *r, float *g, float *b)
+// {
+//    float m1, m2;
+   
+//    if (light < 0.5)
+//       m2 = light * (sat + 1.0);
+//    else
+//       m2 = light + sat - light * sat;
+//    m1 = light * 2.0 - m2;
+//    *r = hue2rgb( m1, m2, hue + 1.0/3.0);
+//    *g = hue2rgb( m1, m2, hue);
+//    *b = hue2rgb( m1, m2, hue - 1.0/3.0);
+// }
+
+// // ---------------------------------------------------------------------------------------------------------------------
+// //  hue2rgb (internal helper function)
+// // ---------------------------------------------------------------------------------------------------------------------
+
+// // CSS3 spec algorithm: http://www.w3.org/TR/2011/REC-css3-color-20110607/#hsl-color
+
+// float hue2rgb( float m1, float m2, float hue )
+// {
+//    float retval;
+//    float h = hue;
+   
+//    if (hue < 0.0)
+//       h = hue + 1.0;
+//    else if (hue > 1.0)
+//       h = hue - 1.0;
+//    else
+//       h = hue;
+
+//    if (h * 6.0 < 1.0)
+//       retval = m1 + (m2 - m1) * h * 6.0;
+//    else if (h * 2.0 < 1.0)
+//       retval = m2;
+//    else if (h * 3.0 < 2.0)
+//       retval = m1 + (m2 - m1) * (2.0 / 3.0 - h) * 6.0;
+//    else
+//       retval = m1;
+
+//    return retval;
+// }
 
 // ---------------------------------------------------------------------------------------------------------------------
 //  Helper functions

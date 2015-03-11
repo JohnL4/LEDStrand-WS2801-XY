@@ -34,7 +34,7 @@ struct rgbStruct
 float hue2rgb( float m1, float m2, float hue )
 {
    float retval;
-   float h = hue;
+   float h;
    
    if (hue < 0.0)
       h = hue + 1.0;
