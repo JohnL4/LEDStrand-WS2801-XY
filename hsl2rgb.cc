@@ -139,4 +139,15 @@ int main( int argc, char **argv)
    // printf( "For hue %d, sat %g, lightness %g, rgb = {%d, %d, %d}\n",
    //         hue, sat, light,
    //         rgb.r, rgb.g, rgb.b);
+
+   float dx = 1.0 / 5;
+   float x;
+   int i;
+
+   for (i = 0; i < 5; i++)
+   {
+      x = i * dx;
+      printf( "%g\n", x);
+   }
+   
 }

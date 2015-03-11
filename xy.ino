@@ -8,12 +8,12 @@
 //  types
 // ---------------------------------------------------------------------------------------------------------------------
 
-struct point
+struct point_s
 {
    int x,y;
 };
 
-struct rgbStruct
+struct rgb_s
 {
    int r,g,b;
 };
@@ -29,8 +29,8 @@ Adafruit_WS2801 strip = Adafruit_WS2801(25, dataPin, clockPin);
 
 float MIN_LIGHTNESS = 0.004;
 
-struct point org = (struct point) { 0, 0   }   ;
-struct point gridSize = (struct point) {5, 5    };
+struct point_s org = (struct point_s) { 0, 0   }   ;
+struct point_s gridSize = (struct point_s) {5, 5    };
 
 // ---------------------------------------------------------------------------------------------------------------------
 //  setup
@@ -51,8 +51,9 @@ void loop() {
   
    // flashTwoDifferentColors();
 
-   cartesianTest();
+   // cartesianTest();
 
+   rotatingColorAxes();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -61,9 +62,9 @@ void loop() {
 
 void flashTwoDifferentColors()
 {
-  struct point org = {0, 0};
-  struct point gridSize = {5, 5};
-  struct point p = {3,1};
+  struct point_s org = {0, 0};
+  struct point_s gridSize = {5, 5};
+  struct point_s p = {3,1};
   int i = point2seq( p, org, gridSize);
   
   strip.setPixelColor( i, Color( 0, 30, 30 ));
@@ -93,7 +94,7 @@ void flashTwoDifferentColors()
 
 void cartesianTest()
 {
-   struct point prevPt;
+   struct point_s prevPt;
    bool prevPtSet = false;
    float lightness;
    float dLightness = 1.0 / gridSize.x;
@@ -101,10 +102,10 @@ void cartesianTest()
    float dSaturation = 1.0 / gridSize.x;
    int i;
 
-   struct point pt;
+   struct point_s pt;
    uint32_t c;
 
-   struct rgbStruct rgb;
+   struct rgb_s rgb;
    
    // bottom left to top right
    for (i = 0; i < 5; i++)
@@ -128,7 +129,7 @@ void cartesianTest()
    }
    // strip.setPixelColor( point2seq( prevPt, org, gridSize), 0);
 
-   delay( 1000);
+   delay( 2000);
    
    // bottom right to top left
    for (i = 0; i < 5; i++)
@@ -153,7 +154,7 @@ void cartesianTest()
    for (i = 0; i < 5; i++)
    {
       pt = {2,i };
-      saturation = i * dSaturation;
+      saturation = i * 0.25;    // 0.0, 0.25, 0.5, 0.75, 1.0
       // lightness *= lightness;
       rgb = hsl2rgb( 120, saturation, 0.5);
       c = Color( rgb.r, rgb.g, rgb.b);
@@ -163,15 +164,62 @@ void cartesianTest()
       prevPtSet = true;
       delay( 100);
    }
-   pt = {3,4 };
-   c = Color( 0, 255, 0);
-   strip.setPixelColor( point2seq( pt, org, gridSize), c);
-   strip.show();
+   // pt = {3,4 };
+   // c = Color( 0, 255, 0);
+   // strip.setPixelColor( point2seq( pt, org, gridSize), c);
+   // strip.show();
    
-   delay( 1500);
+   delay( 6000);
    clearStrip();
    strip.show();
    delay( 600);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+//  rotatingColorAxes
+// ---------------------------------------------------------------------------------------------------------------------
+
+void rotatingColorAxes()
+{
+   int x,y;
+   int dColor = 64;
+   int r,g,b;
+   uint32_t c;
+   int i;
+   struct point_s pt;
+   struct point_s org = {0,0 };
+   struct point_s gridSize = {5,5 } ;
+
+   int run;
+
+   // Label the runs for x and y axes: rg, br, gb
+   // 0, 1, 2
+
+   for (run = 0; run < 3; run++)
+   {
+      for (y = 0; y < 5; y++)
+         for (x = 0; x < 5; x++)
+         {
+            r = dColor * (run == 0 ? x : run == 1 ? y : 0);
+            g = dColor * (run == 0 ? y : run == 1 ? 0 : x);
+            b = dColor * (run == 0 ? 0 : run == 1 ? x : y);
+            
+            r = constrain( r, 0, 255);
+            g = constrain( g, 0, 255);
+            b = constrain( b, 0, 255);
+            c = Color( r, g, b);
+            pt = {x,y } ;
+            i = point2seq( pt, org, gridSize);
+            strip.setPixelColor( i, c);
+            strip.show();
+            delay( 300);
+         }
+      delay( 3000);
+      clearStrip();
+      strip.show();
+      delay( 500);
+   }
+   
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -183,10 +231,10 @@ void cartesianTest()
 // horizontally to the lower right corner, going up a row and continuing back to the left, going up a row and continuing
 // to the right, etc.
 
-int point2seq( struct point aPt, struct point anOrigin, struct point aGridSize)
+int point2seq( struct point_s aPt, struct point_s anOrigin, struct point_s aGridSize)
 {
    int retval;
-   struct point pt0 = aPt;
+   struct point_s pt0 = aPt;
 
    // Transform to zero-based point.
    pt0.x -= anOrigin.x;
@@ -255,9 +303,9 @@ float hue2rgb( float m1, float m2, float hue )
 // hue in degrees
 // sat, light in range [0..1]
 
-struct rgbStruct hsl2rgb( int aHue, float aSat, float aLight)
+struct rgb_s hsl2rgb( int aHue, float aSat, float aLight)
 {
-   rgbStruct retval;
+   rgb_s retval;
    
    float m1, m2, r, g, b;
    
