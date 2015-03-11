@@ -183,7 +183,10 @@ void rotatingColorAxes()
 {
    int x,y;
    int dColor = 64;
+   float d1 = 1.0 / (5-1);      // 0..4 ==> 0..1.0 in 5 steps
+   int exponent = 4;            // Non-linear brightness increase as {x^exponent : x in [0.0..1.0]}
    int r,g,b;
+   float rf, gf, bf;
    uint32_t c;
    int i;
    struct point_s pt;
@@ -200,24 +203,30 @@ void rotatingColorAxes()
       for (y = 0; y < 5; y++)
          for (x = 0; x < 5; x++)
          {
-            r = dColor * (run == 0 ? x : run == 1 ? y : 0);
-            g = dColor * (run == 0 ? y : run == 1 ? 0 : x);
-            b = dColor * (run == 0 ? 0 : run == 1 ? x : y);
+            r = (run == 0 ? x : run == 1 ? y : 0);
+            g = (run == 0 ? y : run == 1 ? 0 : x);
+            b = (run == 0 ? 0 : run == 1 ? x : y);
+
+            // pow(): non-linear brightness increase
+            rf = 256 * pow( d1 * r, exponent);
+            gf = 256 * pow( d1 * g, exponent);
+            bf = 256 * pow( d1 * b, exponent);
             
-            r = constrain( r, 0, 255);
-            g = constrain( g, 0, 255);
-            b = constrain( b, 0, 255);
+            r = constrain( rf, 0, 255);
+            g = constrain( gf, 0, 255);
+            b = constrain( bf, 0, 255);
             c = Color( r, g, b);
             pt = {x,y } ;
             i = point2seq( pt, org, gridSize);
             strip.setPixelColor( i, c);
-            strip.show();
-            delay( 300);
+            // strip.show();
+            // delay( 300);
          }
-      delay( 3000);
-      clearStrip();
       strip.show();
-      delay( 500);
+      delay( 10000);
+      // clearStrip();
+      // strip.show();
+      // delay( 500);
    }
    
 }
