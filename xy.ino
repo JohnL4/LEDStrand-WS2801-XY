@@ -7,16 +7,19 @@
 #include <avr/power.h>
 #endif
 
+#define GRID_SIZE_X 5
+#define GRID_SIZE_Y 5
+
 // ---------------------------------------------------------------------------------------------------------------------
 //  types
 // ---------------------------------------------------------------------------------------------------------------------
 
-struct point_s
+struct point
 {
    int x,y;
 };
 
-struct rgb_s
+struct rgbTriple
 {
    int r,g,b;
 };
@@ -30,10 +33,10 @@ uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
 
 Adafruit_WS2801 strip = Adafruit_WS2801(25, dataPin, clockPin);
 
-float MIN_LIGHTNESS = 0.004;
+const float MIN_LIGHTNESS = 0.004;
 
-struct point_s org = (struct point_s) { 0, 0   }   ;
-struct point_s gridSize = (struct point_s) {5, 5    };
+struct point org = { 0, 0   }   ;
+struct point gridSize = (point) {GRID_SIZE_X, GRID_SIZE_Y };
 
 // ---------------------------------------------------------------------------------------------------------------------
 //  setup
@@ -65,9 +68,9 @@ void loop() {
 
 void flashTwoDifferentColors()
 {
-  struct point_s org = {0, 0};
-  struct point_s gridSize = {5, 5};
-  struct point_s p = {3,1};
+  struct point org = {0, 0};
+  struct point gridSize = {5, 5};
+  struct point p = {3,1};
   int i = point2seq( p, org, gridSize);
   
   strip.setPixelColor( i, Color( 0, 30, 30 ));
@@ -97,7 +100,7 @@ void flashTwoDifferentColors()
 
 void cartesianTest()
 {
-   struct point_s prevPt;
+   struct point prevPt;
    bool prevPtSet = false;
    float lightness;
    float dLightness = 1.0 / gridSize.x;
@@ -105,10 +108,12 @@ void cartesianTest()
    float dSaturation = 1.0 / gridSize.x;
    int i;
 
-   struct point_s pt;
+   struct point pt;
    uint32_t c;
 
-   struct rgb_s rgb;
+   struct rgbTriple rgb;
+   
+   clearStrip();
    
    // bottom left to top right
    for (i = 0; i < 5; i++)
@@ -172,7 +177,7 @@ void cartesianTest()
    // strip.setPixelColor( point2seq( pt, org, gridSize), c);
    // strip.show();
    
-   delay( 6000);
+   delay( 10000);
    clearStrip();
    strip.show();
    delay( 600);
@@ -188,19 +193,191 @@ void rotatingColorAxes()
    int dColor = 64;
    float d1 = 1.0 / (5-1);      // 0..4 ==> 0..1.0 in 5 steps
    int exponent = 4;            // Non-linear brightness increase as {x^exponent : x in [0.0..1.0]}
+   struct rgbTriple rgb;
    int r,g,b;
    float rf, gf, bf;
+   int h;
+   float s, l;
    uint32_t c;
    int i;
-   struct point_s pt;
-   struct point_s org = {0,0 };
-   struct point_s gridSize = {5,5 } ;
+   struct point pt;
 
+   enum gridColorspace 
+   {
+      RGB = 1,
+      HSL
+   };
+
+   enum axisColorspace
+   {
+      RED = 1,
+      GREEN,
+      BLUE,
+      HUE,
+      SAT,                      // Saturation
+      LIGHT                     // Lightness
+   };
+   
+   typedef struct
+   {
+      gridColorspace colorspace;  
+      int xAxisSpace, yAxisSpace; 
+
+      // Axis values may be non-linear (e.g., intensity)
+      union
+      {
+         int axisIntValues[GRID_SIZE_X];
+         float axisFloatValues[GRID_SIZE_X];
+      } x;
+      
+      union
+      {
+         int axisIntValues[GRID_SIZE_Y];
+         float axisFloatValues[GRID_SIZE_Y];
+      } y;
+   } runParamTuple;
+   
+   // TODO: put the following setup in setup() ----------------------------------------------------------------
+   
+   // Gonna cheat, since we know we have a square grid:  same values on each axis.
+
+   int ledBrightness[GRID_SIZE_X]; // RGB intensity
+   float dLedBrightness = 1.0 / (GRID_SIZE_X - 1);
+   float lightness[GRID_SIZE_X]; // HSL
+   float saturation[GRID_SIZE_X]; // HSL
+   
+   ledBrightness[0] = 0;
+   ledBrightness[GRID_SIZE_X - 1] = 255;
+
+   saturation[0] = lightness[0] = 0;
+   saturation[GRID_SIZE_X - 1] = lightness[GRID_SIZE_X - 1] = 1;
+
+   float v;
+
+   clearStrip();
+   
+   for (i = 1; i < GRID_SIZE_X - 1; i++)
+   {
+      v = i * dLedBrightness;   // Linear
+      saturation[i] = v;
+      v = pow( v, exponent);    // Non-linear
+      lightness[i] = v;
+      ledBrightness[i] = v * 256; // Don't need to constrain; won't get close to 255.
+   }
+
+   // Debug:
+   for (i = 0; i < GRID_SIZE_X; i++)
+   {
+      pt = {i, 4 } ;
+      rgb = hsl2rgb( 0, saturation[i], 0.5); // red/pink
+      c = Color( rgb.r, rgb.g, rgb.b);
+      strip.setPixelColor( point2seq( pt, org, gridSize), c);
+
+      pt = {i, 3 } ; 
+      rgb = hsl2rgb( 120, 0.5, lightness[i]); // greenish
+      c = Color( rgb.r, rgb.g, rgb.b);
+      strip.setPixelColor( point2seq( pt, org, gridSize), c);
+
+      pt = {i, 2 } ;
+      c = Color( 0, 0, ledBrightness[i]); // blue
+      strip.setPixelColor( point2seq( pt, org, gridSize), c);
+   }
+   strip.show();
+   delay( 20000);
+
+   runParamTuple runParams[6] = { { RGB , RED   , GREEN } ,  // 0
+                                  { RGB , BLUE  , RED }   ,  // 1
+                                  { RGB , GREEN , BLUE }  ,  // 2
+                                  { HSL , HUE   , SAT }   ,  // 3
+                                  { HSL , HUE   , LIGHT } ,  // 4
+                                  { HSL , SAT   , LIGHT } }; // 5
+   
+   for (i = 0; i < 3; i++)
+   {
+      copyIntArray( runParams[i].x.axisIntValues, ledBrightness, GRID_SIZE_X);
+      copyIntArray( runParams[i].y.axisIntValues, ledBrightness, GRID_SIZE_X);
+   }
+   
+   float dHue = 360.0 / GRID_SIZE_X;
+   for (i = 0; i < GRID_SIZE_X; i++)
+   {
+      runParams[3].x.axisIntValues[i] = (int) (i * dHue + 0.5);
+      runParams[4].x.axisIntValues[i] = (int) (i * dHue + 0.5);
+   }
+   copyFloatArray( runParams[3].y.axisFloatValues, saturation, GRID_SIZE_X);
+   copyFloatArray( runParams[4].y.axisFloatValues, lightness, GRID_SIZE_X);
+   copyFloatArray( runParams[5].y.axisFloatValues, lightness, GRID_SIZE_X);
+
+   copyFloatArray( runParams[5].x.axisFloatValues, saturation, GRID_SIZE_X);
+
+   // (setup ends) ----------------------------------------------------------------
+   
    int run;
 
    // Label the runs for x and y axes: rg, br, gb
    // 0, 1, 2
 
+   for (run = 0; run < 6; run++)
+   {
+      runParamTuple rp = runParams[run];
+      for (y = 0; y < GRID_SIZE_Y; y++)
+         for (x = 0; x < GRID_SIZE_X; x++)
+         {
+            pt = {x,y };
+            // Compute color based on colorspace
+            switch (rp.colorspace)
+            {
+               case RGB:
+                  r = (rp.xAxisSpace == RED
+                       ? rp.x.axisIntValues[x]
+                       : (rp.yAxisSpace == RED
+                          ? rp.y.axisIntValues[y]
+                          : 0));
+                  g = (rp.xAxisSpace == GREEN
+                       ? rp.x.axisIntValues[x]
+                       : (rp.yAxisSpace == GREEN
+                          ? rp.y.axisIntValues[y]
+                          : 0));
+                  b = (rp.xAxisSpace == BLUE
+                       ? rp.x.axisIntValues[x]
+                       : (rp.yAxisSpace == BLUE
+                          ? rp.y.axisIntValues[y]
+                          : 0));
+                  c = Color( r, g, b);
+                  break;
+               case HSL:
+                  h = (rp.xAxisSpace == HUE
+                       ? rp.x.axisIntValues[x]
+                       : (rp.yAxisSpace == HUE
+                          ? rp.y.axisIntValues[y]
+                          : 0));
+                  s = (rp.xAxisSpace == SAT
+                       ? rp.x.axisIntValues[x]
+                       : (rp.yAxisSpace == SAT
+                          ? rp.y.axisIntValues[y]
+                          : 0.5));
+                  l = (rp.xAxisSpace == LIGHT
+                       ? rp.x.axisIntValues[x]
+                       : (rp.yAxisSpace == LIGHT
+                          ? rp.y.axisIntValues[y]
+                          : 0.5));
+                  rgb = hsl2rgb( h, s, l);
+                  c = Color( rgb.r, rgb.g, rgb.b);
+                  break;
+               default:
+                  c = 0;
+                  break;
+            }
+            strip.setPixelColor( point2seq( pt, org, gridSize), c);
+         }
+      rgb = hsl2rgb( run * 60, 1.0, 0.05);
+      c = Color( rgb.r, rgb.g, rgb.b);
+      pt = {0,4 } ;
+      strip.setPixelColor( point2seq( pt, org, gridSize), c);
+      strip.show();
+      delay( 2000);
+   }
+   
    for (run = 0; run < 3; run++)
    {
       for (y = 0; y < 5; y++)
@@ -226,7 +403,7 @@ void rotatingColorAxes()
             // delay( 300);
          }
       strip.show();
-      delay( 10000);
+      delay( 2000);
       // clearStrip();
       // strip.show();
       // delay( 500);
@@ -243,10 +420,10 @@ void rotatingColorAxes()
 // horizontally to the lower right corner, going up a row and continuing back to the left, going up a row and continuing
 // to the right, etc.
 
-int point2seq( struct point_s aPt, struct point_s anOrigin, struct point_s aGridSize)
+int point2seq( struct point aPt, struct point anOrigin, struct point aGridSize)
 {
    int retval;
-   struct point_s pt0 = aPt;
+   struct point pt0 = aPt;
 
    // Transform to zero-based point.
    pt0.x -= anOrigin.x;
@@ -315,9 +492,9 @@ float hue2rgb( float m1, float m2, float hue )
 // hue in degrees
 // sat, light in range [0..1]
 
-struct rgb_s hsl2rgb( int aHue, float aSat, float aLight)
+struct rgbTriple hsl2rgb( int aHue, float aSat, float aLight)
 {
-   rgb_s retval;
+   struct rgbTriple retval;
    
    float m1, m2, r, g, b;
    
@@ -344,58 +521,27 @@ struct rgb_s hsl2rgb( int aHue, float aSat, float aLight)
    return retval;
 }
 
-// hsl2rgb, hue2rgb commented out in favor of new versions
+// ---------------------------------------------------------------------------------------------------------------------
+//  copyIntArray
+// ---------------------------------------------------------------------------------------------------------------------
 
-// // ---------------------------------------------------------------------------------------------------------------------
-// //  hsl2rgb
-// // ---------------------------------------------------------------------------------------------------------------------
+void copyIntArray( int aSrc[], int aDest[], int n)
+{
+   int i;
+   for (i = 0; i < n; i++)
+      aDest[i] = aSrc[i];
+}
 
-// // CSS3 spec algorithm: http://www.w3.org/TR/2011/REC-css3-color-20110607/#hsl-color
-// // All params in range [0.0..1.0]
+// ---------------------------------------------------------------------------------------------------------------------
+//  copyFloatArray
+// ---------------------------------------------------------------------------------------------------------------------
 
-// void hsl2rgb( float hue, float sat, float light, float *r, float *g, float *b)
-// {
-//    float m1, m2;
-   
-//    if (light < 0.5)
-//       m2 = light * (sat + 1.0);
-//    else
-//       m2 = light + sat - light * sat;
-//    m1 = light * 2.0 - m2;
-//    *r = hue2rgb( m1, m2, hue + 1.0/3.0);
-//    *g = hue2rgb( m1, m2, hue);
-//    *b = hue2rgb( m1, m2, hue - 1.0/3.0);
-// }
-
-// // ---------------------------------------------------------------------------------------------------------------------
-// //  hue2rgb (internal helper function)
-// // ---------------------------------------------------------------------------------------------------------------------
-
-// // CSS3 spec algorithm: http://www.w3.org/TR/2011/REC-css3-color-20110607/#hsl-color
-
-// float hue2rgb( float m1, float m2, float hue )
-// {
-//    float retval;
-//    float h = hue;
-   
-//    if (hue < 0.0)
-//       h = hue + 1.0;
-//    else if (hue > 1.0)
-//       h = hue - 1.0;
-//    else
-//       h = hue;
-
-//    if (h * 6.0 < 1.0)
-//       retval = m1 + (m2 - m1) * h * 6.0;
-//    else if (h * 2.0 < 1.0)
-//       retval = m2;
-//    else if (h * 3.0 < 2.0)
-//       retval = m1 + (m2 - m1) * (2.0 / 3.0 - h) * 6.0;
-//    else
-//       retval = m1;
-
-//    return retval;
-// }
+void copyFloatArray( float aSrc[], float aDest[], int n)
+{
+   int i;
+   for (i = 0; i < n; i++)
+      aDest[i] = aSrc[i];
+}
 
 // ---------------------------------------------------------------------------------------------------------------------
 //  Helper functions
