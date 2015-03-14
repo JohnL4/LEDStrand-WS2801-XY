@@ -576,6 +576,7 @@ void clearStrip()
 }
 
 // Create a 24 bit color value from R,G,B
+// (Code snitched from Adafruit.  Please don't sue me, y'all, for stealing your bit-shifting code.)
 uint32_t Color(byte r, byte g, byte b)
 {
   uint32_t c;
