@@ -221,7 +221,7 @@ void rotatingColorAxes()
    typedef struct
    {
       gridColorspace colorspace;  
-      int xAxisSpace, yAxisSpace; 
+      axisColorspace xAxisSpace, yAxisSpace; 
 
       // Axis values may be non-linear (e.g., intensity)
       union
@@ -265,25 +265,25 @@ void rotatingColorAxes()
       ledBrightness[i] = v * 256; // Don't need to constrain; won't get close to 255.
    }
 
-   // Debug:
-   for (i = 0; i < GRID_SIZE_X; i++)
-   {
-      pt = {i, 4 } ;
-      rgb = hsl2rgb( 0, saturation[i], 0.5); // red/pink
-      c = Color( rgb.r, rgb.g, rgb.b);
-      strip.setPixelColor( point2seq( pt, org, gridSize), c);
+   // // Debug:
+   // for (i = 0; i < GRID_SIZE_X; i++)
+   // {
+   //    pt = {i, 4 } ;
+   //    rgb = hsl2rgb( 0, saturation[i], 0.5); // red/pink
+   //    c = Color( rgb.r, rgb.g, rgb.b);
+   //    strip.setPixelColor( point2seq( pt, org, gridSize), c);
 
-      pt = {i, 3 } ; 
-      rgb = hsl2rgb( 120, 0.5, lightness[i]); // greenish
-      c = Color( rgb.r, rgb.g, rgb.b);
-      strip.setPixelColor( point2seq( pt, org, gridSize), c);
+   //    pt = {i, 3 } ; 
+   //    rgb = hsl2rgb( 120, 0.5, lightness[i]); // greenish
+   //    c = Color( rgb.r, rgb.g, rgb.b);
+   //    strip.setPixelColor( point2seq( pt, org, gridSize), c);
 
-      pt = {i, 2 } ;
-      c = Color( 0, 0, ledBrightness[i]); // blue
-      strip.setPixelColor( point2seq( pt, org, gridSize), c);
-   }
-   strip.show();
-   delay( 20000);
+   //    pt = {i, 2 } ;
+   //    c = Color( 0, 0, ledBrightness[i]); // blue
+   //    strip.setPixelColor( point2seq( pt, org, gridSize), c);
+   // }
+   // strip.show();
+   // delay( 15000);
 
    runParamTuple runParams[6] = { { RGB , RED   , GREEN } ,  // 0
                                   { RGB , BLUE  , RED }   ,  // 1
@@ -292,13 +292,15 @@ void rotatingColorAxes()
                                   { HSL , HUE   , LIGHT } ,  // 4
                                   { HSL , SAT   , LIGHT } }; // 5
    
+   // RGB
    for (i = 0; i < 3; i++)
    {
       copyIntArray( runParams[i].x.axisIntValues, ledBrightness, GRID_SIZE_X);
       copyIntArray( runParams[i].y.axisIntValues, ledBrightness, GRID_SIZE_X);
    }
    
-   float dHue = 360.0 / GRID_SIZE_X;
+   // HSL
+   float dHue = 60.0; // 360.0 / GRID_SIZE_X;
    for (i = 0; i < GRID_SIZE_X; i++)
    {
       runParams[3].x.axisIntValues[i] = (int) (i * dHue + 0.5);
@@ -352,14 +354,14 @@ void rotatingColorAxes()
                           ? rp.y.axisIntValues[y]
                           : 0));
                   s = (rp.xAxisSpace == SAT
-                       ? rp.x.axisIntValues[x]
+                       ? rp.x.axisFloatValues[x]
                        : (rp.yAxisSpace == SAT
-                          ? rp.y.axisIntValues[y]
+                          ? rp.y.axisFloatValues[y]
                           : 0.5));
                   l = (rp.xAxisSpace == LIGHT
-                       ? rp.x.axisIntValues[x]
+                       ? rp.x.axisFloatValues[x]
                        : (rp.yAxisSpace == LIGHT
-                          ? rp.y.axisIntValues[y]
+                          ? rp.y.axisFloatValues[y]
                           : 0.5));
                   rgb = hsl2rgb( h, s, l);
                   c = Color( rgb.r, rgb.g, rgb.b);
@@ -368,46 +370,47 @@ void rotatingColorAxes()
                   c = 0;
                   break;
             }
+            // c = Color( 255, 64, 0); // Debug
             strip.setPixelColor( point2seq( pt, org, gridSize), c);
          }
-      rgb = hsl2rgb( run * 60, 1.0, 0.05);
-      c = Color( rgb.r, rgb.g, rgb.b);
-      pt = {0,4 } ;
-      strip.setPixelColor( point2seq( pt, org, gridSize), c);
+      // // Debug
+      // rgb = hsl2rgb( run * 60, 1.0, 0.05);
+      // c = Color( rgb.r, rgb.g, rgb.b);
+      // strip.setPixelColor( run, c);
       strip.show();
-      delay( 2000);
+      delay( run < 3 ? 5000 : 20000); // Delay longer for HSL part of run
    }
    
-   for (run = 0; run < 3; run++)
-   {
-      for (y = 0; y < 5; y++)
-         for (x = 0; x < 5; x++)
-         {
-            r = (run == 0 ? x : run == 1 ? y : 0);
-            g = (run == 0 ? y : run == 1 ? 0 : x);
-            b = (run == 0 ? 0 : run == 1 ? x : y);
+   // for (run = 0; run < 3; run++)
+   // {
+   //    for (y = 0; y < 5; y++)
+   //       for (x = 0; x < 5; x++)
+   //       {
+   //          r = (run == 0 ? x : run == 1 ? y : 0);
+   //          g = (run == 0 ? y : run == 1 ? 0 : x);
+   //          b = (run == 0 ? 0 : run == 1 ? x : y);
 
-            // pow(): non-linear brightness increase
-            rf = 256 * pow( d1 * r, exponent);
-            gf = 256 * pow( d1 * g, exponent);
-            bf = 256 * pow( d1 * b, exponent);
+   //          // pow(): non-linear brightness increase
+   //          rf = 256 * pow( d1 * r, exponent);
+   //          gf = 256 * pow( d1 * g, exponent);
+   //          bf = 256 * pow( d1 * b, exponent);
             
-            r = constrain( rf, 0, 255);
-            g = constrain( gf, 0, 255);
-            b = constrain( bf, 0, 255);
-            c = Color( r, g, b);
-            pt = {x,y } ;
-            i = point2seq( pt, org, gridSize);
-            strip.setPixelColor( i, c);
-            // strip.show();
-            // delay( 300);
-         }
-      strip.show();
-      delay( 2000);
-      // clearStrip();
-      // strip.show();
-      // delay( 500);
-   }
+   //          r = constrain( rf, 0, 255);
+   //          g = constrain( gf, 0, 255);
+   //          b = constrain( bf, 0, 255);
+   //          c = Color( r, g, b);
+   //          pt = {x,y } ;
+   //          i = point2seq( pt, org, gridSize);
+   //          strip.setPixelColor( i, c);
+   //          // strip.show();
+   //          // delay( 300);
+   //       }
+   //    strip.show();
+   //    delay( 2000);
+   //    // clearStrip();
+   //    // strip.show();
+   //    // delay( 500);
+   // }
    
 }
 
@@ -525,7 +528,7 @@ struct rgbTriple hsl2rgb( int aHue, float aSat, float aLight)
 //  copyIntArray
 // ---------------------------------------------------------------------------------------------------------------------
 
-void copyIntArray( int aSrc[], int aDest[], int n)
+void copyIntArray( int aDest[], int aSrc[], int n)
 {
    int i;
    for (i = 0; i < n; i++)
@@ -536,7 +539,7 @@ void copyIntArray( int aSrc[], int aDest[], int n)
 //  copyFloatArray
 // ---------------------------------------------------------------------------------------------------------------------
 
-void copyFloatArray( float aSrc[], float aDest[], int n)
+void copyFloatArray( float aDest[], float aSrc[], int n)
 {
    int i;
    for (i = 0; i < n; i++)
