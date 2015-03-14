@@ -16,6 +16,7 @@
   Clearly, drill 25 1/2-inch holes in a piece of plywood and stick them in, in a zigzag pattern,
   like this:
 
+  #+BEGIN_EXAMPLE
   O---O---O---O---O
   |
   O---O---O---O---O
@@ -25,7 +26,8 @@
   O---O---O---O---O
                   |
   O---O---O---O---O
-
+  #+END_EXAMPLE
+  
   Pixel 0 on the strand is the lower left-hand corner and pixel 24 is the upper-right corner.
 
   Then we can address the pixels with (x,y) coordinates (if we write a translator).
