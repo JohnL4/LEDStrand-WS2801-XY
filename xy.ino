@@ -243,14 +243,16 @@ void rotatingColorAxes()
 
    int ledBrightness[GRID_SIZE_X]; // RGB intensity
    float dLedBrightness = 1.0 / (GRID_SIZE_X - 1);
+   float dLightness = 1.0 / (GRID_SIZE_X + 1); // Will drop lightness = 0 (black) and 1 (white), since that results in
+                                               // an entire row/column being all the same (fully off or fully on).
    float lightness[GRID_SIZE_X]; // HSL
    float saturation[GRID_SIZE_X]; // HSL
    
-   ledBrightness[0] = 0;
+   ledBrightness[0]               = 0;
    ledBrightness[GRID_SIZE_X - 1] = 255;
 
-   saturation[0] = lightness[0] = 0;
-   saturation[GRID_SIZE_X - 1] = lightness[GRID_SIZE_X - 1] = 1;
+   saturation[0]                  = 0;
+   saturation[GRID_SIZE_X - 1]    = 1;
 
    float v;
 
@@ -261,9 +263,16 @@ void rotatingColorAxes()
       v = i * dLedBrightness;   // Linear
       saturation[i] = v;
       v = pow( v, exponent);    // Non-linear
-      lightness[i] = v;
       ledBrightness[i] = v * 256; // Don't need to constrain; won't get close to 255.
    }
+
+   for (i = 0; i < GRID_SIZE_X; i++)
+   {
+      v = (i + 1) * dLightness; // See dLightness.
+      v = pow( v, 3.45);
+      lightness[i] = v;
+   }
+   
 
    // // Debug:
    // for (i = 0; i < GRID_SIZE_X; i++)
@@ -380,7 +389,16 @@ void rotatingColorAxes()
       strip.show();
       delay( run < 3 ? 5000 : 20000); // Delay longer for HSL part of run
    }
-   
+
+   // Since we skipped "black" and "white", show a checkerboard of those.
+
+   clearStrip();
+   c = Color( 255, 255, 255);
+   for (i = 0; i < 25; i += 2)
+      strip.setPixelColor( i, c);
+   strip.show();
+   delay( 5000);
+
    // for (run = 0; run < 3; run++)
    // {
    //    for (y = 0; y < 5; y++)
