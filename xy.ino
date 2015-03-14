@@ -357,7 +357,7 @@ void rotatingColorAxes()
                        ? rp.x.axisFloatValues[x]
                        : (rp.yAxisSpace == SAT
                           ? rp.y.axisFloatValues[y]
-                          : 0.5));
+                          : 1.0));
                   l = (rp.xAxisSpace == LIGHT
                        ? rp.x.axisFloatValues[x]
                        : (rp.yAxisSpace == LIGHT
