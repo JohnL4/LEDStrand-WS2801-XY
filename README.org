@@ -1,11 +1,45 @@
+* LEDStrand-WS2801-XY
+
+  So... I got one of those Adafruit LED strands with integrated WS2801 controllers
+  (https://www.adafruit.com/products/322) to implement the Adalight project
+  (http://www.adafruit.com/product/461).
+
+  Great idea, but... I'm not sure Processing (Java) is the right way to approach high-speed hardware
+  interactions, which is what's required for that project work (it reads the current video RAM, I
+  think, and breaks it down into color regions around the edge, shipping the colors off across a USB
+  cable to the Arduino, which then lights up the LEDs to match the colors on the edge of the
+  screen).  It ran okay on my repurposed-for-Linux old PC, but it clobbers performance (even though
+  it's a "2-processor"[1] system).
+
+  *So...* what to do with this strand of 25 pixels?
+
+  Clearly, drill 25 1/2-inch holes in a piece of plywood and stick them in, in a zigzag pattern,
+  like this:
+
+  O---O---O---O---O
+  |
+  O---O---O---O---O
+                  |
+  O---O---O---O---O
+  |
+  O---O---O---O---O
+                  |
+  O---O---O---O---O
+
+  Pixel 0 on the strand is the lower left-hand corner and pixel 24 is the upper-right corner.
+
+  Then we can address the pixels with (x,y) coordinates (if we write a translator).
+
+[1] Who the heck knows what a multi-processor chip is, these days?  The vendors claim multiple
+processors, but they share some crucial resource, like a system bus or memory bus or some such.
+
 * Can I haz org-mode README?
 
   Maybe.
-  
+
 ** Can I haz 2ndry header?
-  
+
    Again, maybe.
-   
+
    - Can I haz bulleted lists?
    - Maybe.
-   
