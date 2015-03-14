@@ -352,7 +352,7 @@ void rotatingColorAxes()
                        ? rp.x.axisIntValues[x]
                        : (rp.yAxisSpace == HUE
                           ? rp.y.axisIntValues[y]
-                          : 0));
+                          : 120));
                   s = (rp.xAxisSpace == SAT
                        ? rp.x.axisFloatValues[x]
                        : (rp.yAxisSpace == SAT
