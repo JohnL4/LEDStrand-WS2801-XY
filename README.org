@@ -5,7 +5,7 @@
   (http://www.adafruit.com/product/461).
 
   Great idea, but... I'm not sure Processing (Java) is the right way to approach high-speed hardware
-  interactions, which is what's required for that project work (it reads the current video RAM, I
+  interactions, which is what's required for that project to work (it reads the current video RAM, I
   think, and breaks it down into color regions around the edge, shipping the colors off across a USB
   cable to the Arduino, which then lights up the LEDs to match the colors on the edge of the
   screen).  It ran okay on my repurposed-for-Linux old PC, but it clobbers performance (even though
@@ -34,6 +34,10 @@
 
 [1] Who the heck knows what a multi-processor chip is, these days?  The vendors claim multiple
 processors, but they share some crucial resource, like a system bus or memory bus or some such.
+
+* Files
+
+  The only real file in here is =xy.ino=.  The others are experimental/play files I created to test various concepts.
 
 * Can I haz org-mode README?
 
