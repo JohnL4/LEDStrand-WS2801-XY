@@ -443,7 +443,8 @@ void rotatingColorAxes()
       // c = Color( rgb.r, rgb.g, rgb.b);
       // strip.setPixelColor( run, c);
       strip.show();
-      delay( run < 3 ? 5000 : 20000); // Delay longer for HSL part of run (3 * 5 + 3 * 20 = 75 seconds)
+      // delay( run < 3 ? 5000 : 20000); // Delay longer for HSL part of run (3 * 5 + 3 * 20 = 75 seconds)
+      delay( 10000);
    }
 
    // Since we skipped "black" and "white", show a checkerboard of those.
