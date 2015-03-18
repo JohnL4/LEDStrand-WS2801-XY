@@ -102,14 +102,14 @@ struct runParamTuple runParams[6] = { { RGB , RED   , GREEN } ,  // 0
 void setup() {
    int t;
    unsigned long desiredDuration = 3600 * 1000; // total desired run time, milliseconds
-   
-  strip.begin();
-  // clearStrip();
-  strip.show();
-  setupRotatingColorAxes();
+    
+   strip.begin();
+   // clearStrip();
+   strip.show();
+   setupRotatingColorAxes();
 
-  while (millis() < desiredDuration)
-     rotatingColorAxes();
+   while (millis() < desiredDuration)
+      rotatingColorAxes();
 
    clearStrip();
 }
@@ -138,11 +138,35 @@ void showSleepState()
 {
    struct point pt;
    struct rgbTriple rgb;
+   float dLightness   = 1.0 / 300.0;
+   float exponent     = 1.0;
+   float minLightness = 0.03;
+   float maxLightness = 0.9;
+   int delayTime      = 5;
+   int hue;
+   float lightness;
+   float lit;
    
-   rgb = hsl2rgb( 5, 1.0, 0.1);
    pt = {2,2 } ;
-   strip.setPixelColor( point2seq( pt, org, gridSize), Color( rgb.r, rgb.g, rgb.b));
-   strip.show();
+   for (hue = 0; hue < 360; hue++)
+   {
+      for (lightness = minLightness; lightness <= maxLightness; lightness += dLightness)
+      {
+         lit = pow( lightness, exponent);
+         rgb = hsl2rgb( hue, 1.0, lit);
+         strip.setPixelColor( point2seq( pt, org, gridSize), Color( rgb.r, rgb.g, rgb.b));
+         strip.show();
+         delay( delayTime);
+      }
+      for (lightness = maxLightness; lightness >= minLightness; lightness -= dLightness)
+      {
+         lit = pow( lightness, exponent);
+         rgb = hsl2rgb( hue, 1.0, lit);
+         strip.setPixelColor( point2seq( pt, org, gridSize), Color( rgb.r, rgb.g, rgb.b));
+         strip.show();
+         delay( delayTime);
+      }
+   }
 }
 
 
