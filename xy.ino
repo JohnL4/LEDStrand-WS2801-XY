@@ -14,6 +14,22 @@
 //  types
 // ---------------------------------------------------------------------------------------------------------------------
 
+enum gridColorspace 
+{
+   RGB = 1,
+   HSL
+};
+
+enum axisColorspace
+{
+   RED = 1,
+   GREEN,
+   BLUE,
+   HUE,
+   SAT,                      // Saturation
+   LIGHT                     // Lightness
+};
+   
 struct point
 {
    int x,y;
@@ -24,6 +40,25 @@ struct rgbTriple
    int r,g,b;
 };
 
+typedef struct runParamTuple
+{
+   gridColorspace colorspace;  
+   axisColorspace xAxisSpace, yAxisSpace; 
+
+   // Axis values may be non-linear (e.g., intensity)
+   union
+   {
+      int axisIntValues[GRID_SIZE_X];
+      float axisFloatValues[GRID_SIZE_X];
+   } x;
+      
+   union
+   {
+      int axisIntValues[GRID_SIZE_Y];
+      float axisFloatValues[GRID_SIZE_Y];
+   } y;
+};
+   
 // ---------------------------------------------------------------------------------------------------------------------
 //  globals
 // ---------------------------------------------------------------------------------------------------------------------
@@ -38,14 +73,45 @@ const float MIN_LIGHTNESS = 0.004;
 struct point org = { 0, 0   }   ;
 struct point gridSize = (point) {GRID_SIZE_X, GRID_SIZE_Y };
 
+// Gonna cheat, since we know we have a square grid:  same values on each axis.
+
+float lightness[GRID_SIZE_X]; // HSL
+float saturation[GRID_SIZE_X]; // HSL
+
+int ledBrightness[GRID_SIZE_X]; // RGB intensity
+float dLedBrightness = 1.0 / (GRID_SIZE_X - 1);
+float dLightness = 1.0 / (GRID_SIZE_X + 1); // Will drop lightness = 0 (black) and 1 (white), since that results in an
+                                            // entire row/column being all the same (fully off or fully on). 
+
+int exponent = 4;               // Non-linear brightness increase as {x^exponent : x in [0.0..1.0]}
+   
+float v;
+float dHue = 60.0; // 360.0 / GRID_SIZE_X;
+
+struct runParamTuple runParams[6] = { { RGB , RED   , GREEN } ,  // 0
+                                      { RGB , BLUE  , RED }   ,  // 1
+                                      { RGB , GREEN , BLUE }  ,  // 2
+                                      { HSL , HUE   , SAT }   ,  // 3
+                                      { HSL , HUE   , LIGHT } ,  // 4
+                                      { HSL , SAT   , LIGHT } }; // 5
+   
 // ---------------------------------------------------------------------------------------------------------------------
 //  setup
 // ---------------------------------------------------------------------------------------------------------------------
 
 void setup() {
+   int t;
+   unsigned long desiredDuration = 3600 * 1000; // total desired run time, milliseconds
+   
   strip.begin();
   // clearStrip();
   strip.show();
+  setupRotatingColorAxes();
+
+  while (millis() < desiredDuration)
+     rotatingColorAxes();
+
+   clearStrip();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -59,8 +125,26 @@ void loop() {
 
    // cartesianTest();
 
-   rotatingColorAxes();
+   // rotatingColorAxes();
+
+   showSleepState();
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+//  showSleepState
+// ---------------------------------------------------------------------------------------------------------------------
+
+void showSleepState()
+{
+   struct point pt;
+   struct rgbTriple rgb;
+   
+   rgb = hsl2rgb( 5, 1.0, 0.1);
+   pt = {2,2 } ;
+   strip.setPixelColor( point2seq( pt, org, gridSize), Color( rgb.r, rgb.g, rgb.b));
+   strip.show();
+}
+
 
 // ---------------------------------------------------------------------------------------------------------------------
 //  flashTwoDifferentColors
@@ -187,74 +271,16 @@ void cartesianTest()
 //  rotatingColorAxes
 // ---------------------------------------------------------------------------------------------------------------------
 
-void rotatingColorAxes()
+// Setup for rotationColorAxes()
+void setupRotatingColorAxes()
 {
-   int x,y;
-   int dColor = 64;
-   float d1 = 1.0 / (5-1);      // 0..4 ==> 0..1.0 in 5 steps
-   int exponent = 4;            // Non-linear brightness increase as {x^exponent : x in [0.0..1.0]}
-   struct rgbTriple rgb;
-   int r,g,b;
-   float rf, gf, bf;
-   int h;
-   float s, l;
-   uint32_t c;
    int i;
-   struct point pt;
-
-   enum gridColorspace 
-   {
-      RGB = 1,
-      HSL
-   };
-
-   enum axisColorspace
-   {
-      RED = 1,
-      GREEN,
-      BLUE,
-      HUE,
-      SAT,                      // Saturation
-      LIGHT                     // Lightness
-   };
-   
-   typedef struct
-   {
-      gridColorspace colorspace;  
-      axisColorspace xAxisSpace, yAxisSpace; 
-
-      // Axis values may be non-linear (e.g., intensity)
-      union
-      {
-         int axisIntValues[GRID_SIZE_X];
-         float axisFloatValues[GRID_SIZE_X];
-      } x;
-      
-      union
-      {
-         int axisIntValues[GRID_SIZE_Y];
-         float axisFloatValues[GRID_SIZE_Y];
-      } y;
-   } runParamTuple;
-   
-   // TODO: put the following setup in setup() ----------------------------------------------------------------
-   
-   // Gonna cheat, since we know we have a square grid:  same values on each axis.
-
-   int ledBrightness[GRID_SIZE_X]; // RGB intensity
-   float dLedBrightness = 1.0 / (GRID_SIZE_X - 1);
-   float dLightness = 1.0 / (GRID_SIZE_X + 1); // Will drop lightness = 0 (black) and 1 (white), since that results in
-                                               // an entire row/column being all the same (fully off or fully on).
-   float lightness[GRID_SIZE_X]; // HSL
-   float saturation[GRID_SIZE_X]; // HSL
    
    ledBrightness[0]               = 0;
    ledBrightness[GRID_SIZE_X - 1] = 255;
 
    saturation[0]                  = 0;
    saturation[GRID_SIZE_X - 1]    = 1;
-
-   float v;
 
    clearStrip();
    
@@ -294,13 +320,6 @@ void rotatingColorAxes()
    // strip.show();
    // delay( 15000);
 
-   runParamTuple runParams[6] = { { RGB , RED   , GREEN } ,  // 0
-                                  { RGB , BLUE  , RED }   ,  // 1
-                                  { RGB , GREEN , BLUE }  ,  // 2
-                                  { HSL , HUE   , SAT }   ,  // 3
-                                  { HSL , HUE   , LIGHT } ,  // 4
-                                  { HSL , SAT   , LIGHT } }; // 5
-   
    // RGB
    for (i = 0; i < 3; i++)
    {
@@ -309,7 +328,6 @@ void rotatingColorAxes()
    }
    
    // HSL
-   float dHue = 60.0; // 360.0 / GRID_SIZE_X;
    for (i = 0; i < GRID_SIZE_X; i++)
    {
       runParams[3].x.axisIntValues[i] = (int) (i * dHue + 0.5);
@@ -320,17 +338,31 @@ void rotatingColorAxes()
    copyFloatArray( runParams[5].y.axisFloatValues, lightness, GRID_SIZE_X);
 
    copyFloatArray( runParams[5].x.axisFloatValues, saturation, GRID_SIZE_X);
+}
 
-   // (setup ends) ----------------------------------------------------------------
-   
-   int run;
+// Show two of three axes of RGB and HSL colorspaces, with the third axis held to some reasonable constant, blending
+// those values into a single unique colorspace point.  Rotate among the choice of which two axes to use (e.g.,
+// red/green, hue/saturation, etc.).
+void rotatingColorAxes()
+{
+   int x,y;
+   int dColor = 64;
+   float d1 = 1.0 / (5-1);      // 0..4 ==> 0..1.0 in 5 steps
+   struct rgbTriple rgb;
+   int r,g,b;
+   float rf, gf, bf;
+   int h;
+   float s, l;
+   uint32_t c;
+   int i;
+   struct point pt;
 
-   // Label the runs for x and y axes: rg, br, gb
-   // 0, 1, 2
+   int run;                     // We're going to do a series of "runs", in which we pick the axes, set the third
+                                // component to a constant and then generate values for each grid point.
 
    for (run = 0; run < 6; run++)
    {
-      runParamTuple rp = runParams[run];
+      struct runParamTuple rp = runParams[run];
       for (y = 0; y < GRID_SIZE_Y; y++)
          for (x = 0; x < GRID_SIZE_X; x++)
          {
@@ -387,7 +419,7 @@ void rotatingColorAxes()
       // c = Color( rgb.r, rgb.g, rgb.b);
       // strip.setPixelColor( run, c);
       strip.show();
-      delay( run < 3 ? 5000 : 20000); // Delay longer for HSL part of run
+      delay( run < 3 ? 5000 : 20000); // Delay longer for HSL part of run (3 * 5 + 3 * 20 = 75 seconds)
    }
 
    // Since we skipped "black" and "white", show a checkerboard of those.
@@ -399,6 +431,7 @@ void rotatingColorAxes()
    strip.show();
    delay( 5000);
 
+   // Old code, to be deleted at some point:
    // for (run = 0; run < 3; run++)
    // {
    //    for (y = 0; y < 5; y++)
