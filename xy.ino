@@ -101,8 +101,9 @@ struct runParamTuple runParams[6] = { { RGB , RED   , GREEN } ,  // 0
 
 void setup() {
    int t;
-   unsigned long desiredDuration = 3600 * 1000; // total desired run time, milliseconds
-    
+   unsigned long desiredDuration = 3600UL * 1000UL; // total desired run time, milliseconds
+   // desiredDuration = 120UL * 1000UL;
+   
    strip.begin();
    // clearStrip();
    strip.show();
@@ -454,7 +455,7 @@ void rotatingColorAxes()
    for (i = 0; i < 25; i += 2)
       strip.setPixelColor( i, c);
    strip.show();
-   delay( 5000);
+   delay( 10000);
 
    // Old code, to be deleted at some point:
    // for (run = 0; run < 3; run++)
