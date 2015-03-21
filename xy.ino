@@ -1,6 +1,34 @@
 // Compile and run with:
 // arduino --upload --board arduino:avr:uno --port /dev/ttyACM0 xy.ino
 
+/* Configure tty to read output from Serial.print():
+
+   stty -F /dev/ttyACM0 cs8 115200 -cstopb ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
+  
+   stty -F /dev/ttyACM0
+      cs8                       // Set character size to 8 bits
+      115200                    // Baud rate, matching Serial.begin(n)
+      -cstopb                   // Use only only 1 stop bit per characters
+      ignbrk                    // Ignore break characters
+      -brkint                   // NOT Breaks cause interrupt signal
+      -icrnl                    // NOT Translate CR to NL
+      -imaxbel                  // NOT beep and do not flush a full input buffer on a characters -- does this mean it
+                                //     WILL flush the buffer?
+      -opost                    // NOT postprocess output
+      -onlcr                    // NOT translate NL to CRNL (LF?)
+      -isig                     // NOT enable interrupt, quit, suspect special characters
+      -icanon                   // NOT enable erase, kill, werase, rprnt special characters
+      -iexten                   // NOT enable non-POSIX special characters
+      -echo                     // NOT echo input characters
+      -echoe                    // NOT echo erase characters as backspace-space-backspace
+      -echok                    // NOT echo a newline after a kill characters
+      -echoctl                  // NOT echo control characters in hat notation ('^c')
+      -echoke                   // NOT kill all line by obeying the echoctl and echok settings
+      noflsh                    // Disable flushing after interrupt and quit special characters
+      -ixon                     // Enable XON/XOFF flow control
+      -crtscts                  // Enable RTS/CTS handshaking
+ */
+
 #include "Adafruit_WS2801.h"
 #include "SPI.h" // Comment out this line if using Trinket or Gemma
 #ifdef __AVR_ATtiny85__
@@ -104,13 +132,23 @@ void setup() {
    unsigned long desiredDuration = 3600UL * 1000UL; // total desired run time, milliseconds
    // desiredDuration = 120UL * 1000UL;
    
+//   Serial.begin( 115200);
+//   Serial.println( "setup()");
+//   Serial.print( "desiredDuration = ");
+//   Serial.println( desiredDuration);
+
    strip.begin();
    // clearStrip();
    strip.show();
    setupRotatingColorAxes();
 
    while (millis() < desiredDuration)
+   {
+//      Serial.print( "millis() = ");
+//      Serial.println( millis());
       rotatingColorAxes();
+   }
+   
 
    clearStrip();
 }
@@ -387,6 +425,9 @@ void rotatingColorAxes()
 
    for (run = 0; run < 6; run++)
    {
+//      Serial.print( "run ");
+//      Serial.println( run);
+      
       struct runParamTuple rp = runParams[run];
       for (y = 0; y < GRID_SIZE_Y; y++)
          for (x = 0; x < GRID_SIZE_X; x++)
